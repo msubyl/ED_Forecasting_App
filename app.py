@@ -962,6 +962,8 @@ elif st.session_state.page == "input":
             daily_df, tft_model, raw_predictions, dataloader = predict_daily(user_input)
             hourly_df = predict_hourly(user_input)
 
+            st.session_state.daily_df = daily_df
+            st.session_state.hourly_df = hourly_df
             st.session_state.tft_model = tft_model
             st.session_state.raw_predictions = raw_predictions
             st.session_state.dataloader = dataloader
@@ -984,9 +986,13 @@ elif st.session_state.page == "input":
 # page3
 elif st.session_state.page == "results":
 
-    daily_df  = st.session_state.daily_df
-    hourly_df = st.session_state.hourly_df
-    user_input = st.session_state.user_input
+    daily_df  = st.session_state.get("daily_df")
+    hourly_df = st.session_state.get("hourly_df")
+    user_input = st.session_state.get("user_input")
+    
+    if daily_df is None or hourly_df is None:
+        st.warning("No forecast available. Please generate a prediction first.")
+        st.stop()
 
 
     st.markdown("""
