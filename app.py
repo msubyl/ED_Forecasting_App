@@ -1094,6 +1094,7 @@ elif st.session_state.page == "results":
     daily_df  = st.session_state.daily_df
     hourly_df = st.session_state.hourly_df
     user_input = st.session_state.user_input
+    daily_xai = st.session_state.daily_xai
 
     st.markdown("""
     <style>
