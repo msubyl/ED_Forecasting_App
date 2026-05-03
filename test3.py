@@ -4,7 +4,10 @@ import base64
 from pathlib import Path
 from utils.prediction import predict_daily, predict_hourly
 import re
+import pytz
 
+riyadh = pytz.timezone("Asia/Riyadh")
+current_hour = datetime.now(riyadh).hour
 # ── Page config (only once) ──────────────────────────────────────────────────
 st.set_page_config(
     page_title="Marsad",
@@ -209,7 +212,8 @@ if st.session_state.page == "welcome":
 # ════════════════════════════════════════════════════════════════════════════
 elif st.session_state.page == "input":
 
-    current_hour = datetime.now().hour
+    riyadh = pytz.timezone("Asia/Riyadh")
+    current_hour = datetime.now(riyadh).hour
 
     st.markdown("""
     <style>
