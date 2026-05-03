@@ -944,17 +944,17 @@ elif st.session_state.page == "input":
             st.session_state.page = "welcome"
             st.rerun()
 
-    # On submit (logic unchanged)
-    if submitted:
-        user_input = {
-            "date": str(date),
-            "start_hour": start_hour,
-            "avg_weather_C": avg_weather_C,
-            "avg_precip": avg_precip,
-            "avg_snow": avg_snow,
-            "is_weekend": is_weekend,
-            "is_holiday": is_holiday,
-        }
+# On submit (logic unchanged)
+if submitted:
+    user_input = {
+        "date": str(date),
+        "start_hour": start_hour,
+        "avg_weather_C": avg_weather_C,
+        "avg_precip": avg_precip,
+        "avg_snow": avg_snow,
+        "is_weekend": is_weekend,
+        "is_holiday": is_holiday,
+    }
 
     st.session_state.user_input = user_input
 
