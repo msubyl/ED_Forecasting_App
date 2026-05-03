@@ -933,16 +933,15 @@ elif st.session_state.page == "input":
         <br>
         """)
 
-    submitted = st.form_submit_button("Generate Forecast →")
-    
+        submitted = st.form_submit_button("Generate Forecast →")
 
-    # Back button
-    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-    col_back, col_mid, col_right = st.columns([1, 2, 1])
-    with col_back:
-        if st.button("← Back to Welcome"):
-            st.session_state.page = "welcome"
-            st.rerun()
+# Back button
+st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+col_back, col_mid, col_right = st.columns([1, 2, 1])
+with col_back:
+    if st.button("← Back to Welcome"):
+        st.session_state.page = "welcome"
+        st.rerun()
 
 # On submit (logic unchanged)
 if submitted:
@@ -976,7 +975,6 @@ if submitted:
     st.session_state.hourly_df = hourly_df
     st.session_state.page = "results"
     st.rerun()
-
 # page3
 elif st.session_state.page == "results":
 
