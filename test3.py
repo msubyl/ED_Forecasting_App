@@ -1,13 +1,10 @@
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import base64
 from pathlib import Path
 from utils.prediction import predict_daily, predict_hourly
 import re
-import pytz
 
-riyadh = pytz.timezone("Asia/Riyadh")
-current_hour = datetime.now(riyadh).hour
 # ── Page config (only once) ──────────────────────────────────────────────────
 st.set_page_config(
     page_title="Marsad",
@@ -212,8 +209,9 @@ if st.session_state.page == "welcome":
 # ════════════════════════════════════════════════════════════════════════════
 elif st.session_state.page == "input":
 
-    riyadh = pytz.timezone("Asia/Riyadh")
-    current_hour = datetime.now(riyadh).hour
+    # Use UTC+3 (Saudi Arabia time) regardless of server timezone
+    riyadh_tz = timezone(timedelta(hours=3))
+    current_hour = datetime.now(riyadh_tz).hour
 
     st.markdown("""
     <style>
@@ -323,7 +321,7 @@ elif st.session_state.page == "input":
         with col1:
             date = st.date_input("Target Date")
         with col2:
-            start_hour = st.slider("Start Hour for Hourly Forecast", 0, 23, current_hour)
+            start_hour = st.slider("Start Hour for Hourly Forecast", 0, 23, current_hour, format="%d:00")
 
         st.html("""
         <div class="sep"></div>
