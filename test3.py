@@ -249,13 +249,33 @@ elif st.session_state.page == "input":
     div[data-testid="stSlider"]      label,
     div[data-testid="stSelectbox"]   label { font-size:12px !important; font-weight:700 !important; color:#3a5f82 !important; letter-spacing:0.5px !important; text-transform:uppercase !important; }
 
-    [data-testid="stSlider"] [role="slider"] { background-color:#1560a8 !important; border-color:#1560a8 !important; box-shadow:0 0 0 3px rgba(21,96,168,0.2) !important; }
-    [data-testid="stSlider"] p { color:#1560a8 !important; }
-    [data-testid="stSlider"] > div > div > div > div:first-child { background:#1560a8 !important; }
-    [data-baseweb="slider"] > div > div > div:nth-child(2) { background-color:#1560a8 !important; }
-    [data-baseweb="slider"] > div > div > div:first-child   { background-color:#1560a8 !important; }
-    [data-baseweb="slider"] [data-testid] div { background-color:#1560a8 !important; }
-    [data-testid="stSlider"] * { --slider-track-fill-color:#1560a8 !important; }
+    /* Slider thumb */
+    [data-testid="stSlider"] [role="slider"] {
+        background-color: #1560a8 !important;
+        border-color: #1560a8 !important;
+        box-shadow: 0 0 0 3px rgba(21,96,168,0.2) !important;
+    }
+    /* Slider value label (number above thumb) */
+    [data-testid="stSlider"] p { color: #1560a8 !important; }
+    [data-testid="stSliderThumbValue"] {
+        background: transparent !important;
+        color: #1560a8 !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    /* Tooltip box — make transparent */
+    [data-baseweb="tooltip"], [data-baseweb="tooltip"] div {
+        background: transparent !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+    /* Filled track only */
+    [data-testid="stSlider"] > div > div > div > div:first-child {
+        background: #1560a8 !important;
+    }
+    [data-baseweb="slider"] > div > div > div:first-child {
+        background-color: #1560a8 !important;
+    }
 
     div[data-testid="stNumberInput"] button { background:#e6f1fb !important; color:#1560a8 !important; border-color:#d0e4f5 !important; border-radius:8px !important; }
     div[data-testid="stForm"] { background:white !important; border-radius:20px !important; border:1px solid #d0e4f5 !important; box-shadow:0 8px 30px rgba(21,96,168,0.09) !important; padding:28px 32px !important; }
