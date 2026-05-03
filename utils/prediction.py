@@ -196,4 +196,4 @@ def predict_hourly(user_input):
         "Predicted_ED_Visits": hourly_values[:n]
     })
 
-    return result
+    return result, model, predictions, dataloader
