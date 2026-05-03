@@ -934,34 +934,6 @@ elif st.session_state.page == "input":
         """)
 
         submitted = st.form_submit_button("Generate Forecast →")
-
-    # XAI HERE
-st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
-
-st.subheader("🔍 Model Explanation (XAI)")
-
-if tft_model is not None and raw_predictions is not None and dataloader is not None:
-    try:
-        batch = next(iter(dataloader))
-        x, y = batch
-
-        try:
-            raw_output = raw_predictions.output
-        except:
-            raw_output = raw_predictions
-
-        interpretation = tft_model.interpret_output(raw_output, reduction="sum")
-
-        fig1 = tft_model.plot_interpretation(interpretation)
-        st.pyplot(fig1)
-
-        fig2 = tft_model.plot_prediction(x, raw_output, idx=0)
-        st.pyplot(fig2)
-
-    except Exception as e:
-        st.warning(f"XAI could not be generated: {e}")
-else:
-    st.info("Model explanation not available.")
     
 
     # Back button
@@ -1011,11 +983,11 @@ else:
 
 # page3
 elif st.session_state.page == "results":
-    
 
     daily_df  = st.session_state.daily_df
     hourly_df = st.session_state.hourly_df
     user_input = st.session_state.user_input
+
 
     st.markdown("""
     <style>
@@ -1252,6 +1224,36 @@ elif st.session_state.page == "results":
             st.html(make_table(daily_rows, "Date", "Predicted Visits"))
 
         st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
+        st.subheader("🔍 Model Explanation (XAI)")
+
+tft_model = st.session_state.get("tft_model")
+raw_predictions = st.session_state.get("raw_predictions")
+dataloader = st.session_state.get("dataloader")
+
+if tft_model is not None and raw_predictions is not None and dataloader is not None:
+    try:
+        batch = next(iter(dataloader))
+        x, y = batch
+
+        try:
+            raw_output = raw_predictions.output
+        except:
+            raw_output = raw_predictions
+
+        interpretation = tft_model.interpret_output(raw_output, reduction="sum")
+
+        st.markdown("### Feature Importance")
+        fig1 = tft_model.plot_interpretation(interpretation)
+        st.pyplot(fig1)
+
+        st.markdown("### Temporal Attention")
+        fig2 = tft_model.plot_prediction(x, raw_output, idx=0)
+        st.pyplot(fig2)
+
+    except Exception as e:
+        st.warning(f"XAI could not be generated: {e}")
+else:
+    st.info("Model explanation not available.")
 
         # ── Section 2: Next 12-Hour Forecast ──────────────────────────────────
         st.html("""
@@ -1280,12 +1282,19 @@ elif st.session_state.page == "results":
         st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
 
         # ── Action buttons ────────────────────────────────────────────────────
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button(" &nbsp;New Forecast", use_container_width=True):
-                st.session_state.page = "input"
-                st.rerun()
-        with col2:
-            if st.button(" &nbsp;Back to Welcome", use_container_width=True):
-                st.session_state.page = "welcome"
-                st.rerun()
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    if st.button("🔍 Explain Prediction", use_container_width=True):
+        st.session_state.page = "xai"
+        st.rerun()
+
+with col2:
+    if st.button(" &nbsp;New Forecast", use_container_width=True):
+        st.session_state.page = "input"
+        st.rerun()
+
+with col3:
+    if st.button(" &nbsp;Back to Welcome", use_container_width=True):
+        st.session_state.page = "welcome"
+        st.rerun()
