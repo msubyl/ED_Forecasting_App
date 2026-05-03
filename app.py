@@ -935,6 +935,35 @@ elif st.session_state.page == "input":
 
         submitted = st.form_submit_button("Generate Forecast →")
 
+    # XAI HERE
+st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+
+st.subheader("🔍 Model Explanation (XAI)")
+
+if tft_model is not None and raw_predictions is not None and dataloader is not None:
+    try:
+        batch = next(iter(dataloader))
+        x, y = batch
+
+        try:
+            raw_output = raw_predictions.output
+        except:
+            raw_output = raw_predictions
+
+        interpretation = tft_model.interpret_output(raw_output, reduction="sum")
+
+        fig1 = tft_model.plot_interpretation(interpretation)
+        st.pyplot(fig1)
+
+        fig2 = tft_model.plot_prediction(x, raw_output, idx=0)
+        st.pyplot(fig2)
+
+    except Exception as e:
+        st.warning(f"XAI could not be generated: {e}")
+else:
+    st.info("Model explanation not available.")
+    
+
     # Back button
     st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
     col_back, col_mid, col_right = st.columns([1, 2, 1])
@@ -958,8 +987,12 @@ elif st.session_state.page == "input":
         st.session_state.user_input = user_input
 
         with st.spinner("Generating forecast..."):
-            daily_df = predict_daily(user_input)
+            daily_df, tft_model, raw_predictions, dataloader = predict_daily(user_input)
             hourly_df = predict_hourly(user_input)
+
+            st.session_state.tft_model = tft_model
+            st.session_state.raw_predictions = raw_predictions
+            st.session_state.dataloader = dataloader
 
             first_day_prediction = daily_df.iloc[0]["Predicted_ED_Visits"]
             hourly_sum = hourly_df["Predicted_ED_Visits"].sum()
@@ -978,6 +1011,7 @@ elif st.session_state.page == "input":
 
 # page3
 elif st.session_state.page == "results":
+    
 
     daily_df  = st.session_state.daily_df
     hourly_df = st.session_state.hourly_df
