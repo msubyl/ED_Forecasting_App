@@ -956,7 +956,7 @@ elif st.session_state.page == "input":
             "is_holiday": is_holiday,
         }
 
-        st.session_state.user_input = user_input
+    st.session_state.user_input = user_input
 
     with st.spinner("Generating forecast..."):
         daily_df = predict_daily(user_input)
