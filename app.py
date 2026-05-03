@@ -401,6 +401,115 @@ header, footer, #MainMenu {
 </style>
 """, unsafe_allow_html=True)
 
+def render_daily_xai(model, training_dataset, future_df):
+    """
+    Render TFT interpretability section in the Marsad dashboard style.
+    """
+
+    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+
+    st.html("""
+    <div class="sec-hdr">
+        <span class="sec-hdr-lbl">🔎 &nbsp;Forecast Explanation</span>
+    </div>
+    """)
+
+    st.html("""
+    <div style="
+        background:white;
+        border:1px solid #d0e4f5;
+        border-radius:16px;
+        box-shadow:0 4px 16px rgba(21,96,168,0.07);
+        padding:18px 22px;
+        margin-bottom:18px;
+        font-family:Arial, sans-serif;
+    ">
+        <div style="color:#1560a8;font-size:15px;font-weight:800;margin-bottom:6px;">
+            What does this explanation show?
+        </div>
+        <div style="color:#1e3550;font-size:14px;line-height:1.7;">
+            This section explains the daily ED forecast in simple operational terms.
+            It shows which historical days and input factors the Temporal Fusion Transformer
+            considered before producing the forecast.
+        </div>
+    </div>
+    """)
+
+    try:
+        prediction_data = training_dataset.from_dataset(
+            training_dataset,
+            future_df,
+            predict=True,
+            stop_randomization=True,
+        )
+
+        prediction_loader = prediction_data.to_dataloader(
+            train=False,
+            batch_size=32,
+            num_workers=0,
+        )
+
+        predictions = model.predict(
+            prediction_loader,
+            mode="raw",
+            return_x=True,
+        )
+
+        if hasattr(predictions, "output"):
+            raw_predictions = predictions.output
+        elif isinstance(predictions, tuple):
+            raw_predictions = predictions[0]
+        else:
+            raw_predictions = predictions
+
+        interpretation = model.interpret_output(
+            raw_predictions,
+            reduction="sum",
+        )
+
+        figures = model.plot_interpretation(interpretation)
+
+        if isinstance(figures, dict):
+
+            if "attention" in figures:
+                with st.expander("Which previous days did the model focus on?", expanded=True):
+                    st.caption(
+                        "This chart shows which earlier days were most important when the model made the forecast. "
+                        "Higher values mean the model relied more on those historical days."
+                    )
+                    st.pyplot(figures["attention"])
+
+            if "encoder_variables" in figures:
+                with st.expander("Which past factors affected the forecast?", expanded=True):
+                    st.caption(
+                        "This chart shows the historical information used by the model, such as previous ED visits, "
+                        "past weather, and past calendar patterns."
+                    )
+                    st.pyplot(figures["encoder_variables"])
+
+            if "decoder_variables" in figures:
+                with st.expander("Which future known factors affected the forecast?", expanded=True):
+                    st.caption(
+                        "This chart shows information known before the forecast period, such as day of week, "
+                        "month, weekend status, holiday status, and timing features."
+                    )
+                    st.pyplot(figures["decoder_variables"])
+
+            if "static_variables" in figures:
+                with st.expander("What general context did the model use?", expanded=False):
+                    st.caption(
+                        "This chart shows general model context, such as the historical context length "
+                        "or series-level information used before forecasting."
+                    )
+                    st.pyplot(figures["static_variables"])
+
+        else:
+            with st.expander("Forecast explanation chart", expanded=True):
+                st.pyplot(figures)
+
+    except Exception as e:
+        st.error(f"Daily XAI failed: {e}")
+
 # page 1
 if st.session_state.page == "welcome":
 
