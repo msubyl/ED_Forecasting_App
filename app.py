@@ -1061,7 +1061,7 @@ elif st.session_state.page == "input":
             st.session_state.user_input = user_input
 
             with st.spinner("Generating forecast..."):
-                daily_df = predict_daily(user_input)
+                daily_df, daily_xai = predict_daily(user_input)
                 hourly_df = predict_hourly(user_input)
 
                 first_day_prediction = daily_df.iloc[0]["Predicted_ED_Visits"]
