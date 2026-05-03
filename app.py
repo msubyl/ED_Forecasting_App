@@ -935,54 +935,53 @@ elif st.session_state.page == "input":
 
         submitted = st.form_submit_button("Generate Forecast →")
 
-    # Back button
-    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-    col_back, col_mid, col_right = st.columns([1, 2, 1])
-    with col_back:
-        if st.button("← Back to Welcome"):
-            st.session_state.page = "welcome"
-            st.rerun()
-
-    # On submit (logic unchanged)
-    if submitted:
-        user_input = {
-            "date": str(date),
-            "start_hour": start_hour,
-            "avg_weather_C": avg_weather_C,
-            "avg_precip": avg_precip,
-            "avg_snow": avg_snow,
-            "is_weekend": is_weekend,
-            "is_holiday": is_holiday,
-        }
-
-        st.session_state.user_input = user_input
-
-        with st.spinner("Generating forecast..."):
-            daily_df = predict_daily(user_input)
-            hourly_df = predict_hourly(user_input)
-
-            first_day_prediction = daily_df.iloc[0]["Predicted_ED_Visits"]
-            hourly_sum = hourly_df["Predicted_ED_Visits"].sum()
-
-            if hourly_sum > 0:
-                hourly_df["Predicted_ED_Visits"] = (
-                    hourly_df["Predicted_ED_Visits"] / hourly_sum
-                ) * first_day_prediction * 0.5
-
-            hourly_df["Predicted_ED_Visits"] = hourly_df["Predicted_ED_Visits"].round().astype(int)
-
-        st.session_state.daily_df = daily_df
-        st.session_state.hourly_df = hourly_df
-        st.session_state.page = "results"
+# Back button
+st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+col_back, col_mid, col_right = st.columns([1, 2, 1])
+with col_back:
+    if st.button("← Back to Welcome"):
+        st.session_state.page = "welcome"
         st.rerun()
 
+# On submit (logic unchanged)
+if submitted:
+    user_input = {
+        "date": str(date),
+        "start_hour": start_hour,
+        "avg_weather_C": avg_weather_C,
+        "avg_precip": avg_precip,
+        "avg_snow": avg_snow,
+        "is_weekend": is_weekend,
+        "is_holiday": is_holiday,
+    }
+
+    st.session_state.user_input = user_input
+
+    with st.spinner("Generating forecast..."):
+        daily_df = predict_daily(user_input)
+        hourly_df = predict_hourly(user_input)
+
+        first_day_prediction = daily_df.iloc[0]["Predicted_ED_Visits"]
+        hourly_sum = hourly_df["Predicted_ED_Visits"].sum()
+
+        if hourly_sum > 0:
+            hourly_df["Predicted_ED_Visits"] = (
+                hourly_df["Predicted_ED_Visits"] / hourly_sum
+            ) * first_day_prediction * 0.5
+
+        hourly_df["Predicted_ED_Visits"] = hourly_df["Predicted_ED_Visits"].round().astype(int)
+
+    st.session_state.daily_df = daily_df
+    st.session_state.hourly_df = hourly_df
+    st.session_state.page = "results"
+    st.rerun()
 # page3
 elif st.session_state.page == "results":
 
     daily_df  = st.session_state.daily_df
     hourly_df = st.session_state.hourly_df
     user_input = st.session_state.user_input
-
+    
     st.markdown("""
     <style>
     .stApp {
@@ -1219,39 +1218,39 @@ elif st.session_state.page == "results":
 
         st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
 
-        # ── Section 2: Next 12-Hour Forecast ──────────────────────────────────
-        st.html("""
-        <div class="sec-hdr">
-            <span class="sec-hdr-lbl">🕐 &nbsp;Next 12-Hour Forecast</span>
-        </div>
-        """)
+         # ── Section 2: Next 12-Hour Forecast ──────────────────────────────────
+    st.html("""
+    <div class="sec-hdr">
+        <span class="sec-hdr-lbl">🕐 &nbsp;Next 12-Hour Forecast</span>
+    </div>
+    """)
 
-        with st.expander(" &nbsp;Show 12-hour chart & data", expanded=True):
-            st.caption("Expected patient flow for the next 12 hours starting from the selected hour.")
+    with st.expander(" &nbsp;Show 12-hour chart & data", expanded=True):
+        st.caption("Expected patient flow for the next 12 hours starting from the selected hour.")
 
-            st.line_chart(
-                hourly_df.set_index("Time")["Predicted_ED_Visits"],
-                color="#1560a8"
-            )
+        st.line_chart(
+            hourly_df.set_index("Time")["Predicted_ED_Visits"],
+            color="#1560a8"
+        )
 
-            hourly_rows = []
-            for _, row in hourly_df.iterrows():
-                t = str(row["Time"])
-                match = _re.search(r'\d{2}:\d{2}', t)
-                time_str = match.group() if match else t
-                hourly_rows.append((f"{time_str}", int(row["Predicted_ED_Visits"])))
+        hourly_rows = []
+        for _, row in hourly_df.iterrows():
+            t = str(row["Time"])
+            match = _re.search(r'\d{2}:\d{2}', t)
+            time_str = match.group() if match else t
+            hourly_rows.append((f"{time_str}", int(row["Predicted_ED_Visits"])))
 
-            st.html(make_table(hourly_rows, "Hour", "Predicted Visits"))
+        st.html(make_table(hourly_rows, "Hour", "Predicted Visits"))
 
-        st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
 
-        # ── Action buttons ────────────────────────────────────────────────────
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button(" &nbsp;New Forecast", use_container_width=True):
-                st.session_state.page = "input"
-                st.rerun()
-        with col2:
-            if st.button(" &nbsp;Back to Welcome", use_container_width=True):
-                st.session_state.page = "welcome"
-                st.rerun()
+    # ── Action buttons ────────────────────────────────────────────────────
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button(" &nbsp;New Forecast", use_container_width=True):
+            st.session_state.page = "input"
+            st.rerun()
+    with col2:
+        if st.button(" &nbsp;Back to Welcome", use_container_width=True):
+            st.session_state.page = "welcome"
+            st.rerun()
