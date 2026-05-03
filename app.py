@@ -933,7 +933,7 @@ elif st.session_state.page == "input":
         <br>
         """)
 
-        submitted = st.form_submit_button("Generate Forecast →")
+    submitted = st.form_submit_button("Generate Forecast →")
     
 
     # Back button
