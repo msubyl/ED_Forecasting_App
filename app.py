@@ -959,14 +959,9 @@ elif st.session_state.page == "input":
         st.session_state.user_input = user_input
 
         with st.spinner("Generating forecast..."):
-            daily_df, tft_model, raw_predictions, dataloader = predict_daily(user_input)
+            daily_df = predict_daily(user_input)
             hourly_df = predict_hourly(user_input)
 
-            st.session_state.daily_df = daily_df
-            st.session_state.hourly_df = hourly_df
-            st.session_state.tft_model = tft_model
-            st.session_state.raw_predictions = raw_predictions
-            st.session_state.dataloader = dataloader
 
             first_day_prediction = daily_df.iloc[0]["Predicted_ED_Visits"]
             hourly_sum = hourly_df["Predicted_ED_Visits"].sum()
@@ -1230,36 +1225,6 @@ elif st.session_state.page == "results":
             st.html(make_table(daily_rows, "Date", "Predicted Visits"))
 
         st.markdown("<div style='height:24px'></div>", unsafe_allow_html=True)
-        st.subheader("🔍 Model Explanation (XAI)")
-
-tft_model = st.session_state.get("tft_model")
-raw_predictions = st.session_state.get("raw_predictions")
-dataloader = st.session_state.get("dataloader")
-
-if tft_model is not None and raw_predictions is not None and dataloader is not None:
-    try:
-        batch = next(iter(dataloader))
-        x, y = batch
-
-        try:
-            raw_output = raw_predictions.output
-        except:
-            raw_output = raw_predictions
-
-        interpretation = tft_model.interpret_output(raw_output, reduction="sum")
-
-        st.markdown("### Feature Importance")
-        fig1 = tft_model.plot_interpretation(interpretation)
-        st.pyplot(fig1)
-
-        st.markdown("### Temporal Attention")
-        fig2 = tft_model.plot_prediction(x, raw_output, idx=0)
-        st.pyplot(fig2)
-
-    except Exception as e:
-        st.warning(f"XAI could not be generated: {e}")
-else:
-    st.info("Model explanation not available.")
 
         # ── Section 2: Next 12-Hour Forecast ──────────────────────────────────
 st.html("""
@@ -1288,7 +1253,7 @@ with st.expander(" &nbsp;Show 12-hour chart & data", expanded=True):
 st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
 
         # ── Action buttons ────────────────────────────────────────────────────
-col1, col2, col3 = st.columns(3)
+col1, col2 = st.columns(3)
 
 with col1:
     if st.button("🔍 Explain Prediction", use_container_width=True):
@@ -1300,7 +1265,3 @@ with col2:
         st.session_state.page = "input"
         st.rerun()
 
-with col3:
-    if st.button(" &nbsp;Back to Welcome", use_container_width=True):
-        st.session_state.page = "welcome"
-        st.rerun()
