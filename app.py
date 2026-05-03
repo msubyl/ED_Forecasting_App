@@ -1256,30 +1256,30 @@ else:
     st.info("Model explanation not available.")
 
         # ── Section 2: Next 12-Hour Forecast ──────────────────────────────────
-        st.html("""
-        <div class="sec-hdr">
-            <span class="sec-hdr-lbl">🕐 &nbsp;Next 12-Hour Forecast</span>
-        </div>
-        """)
+st.html("""
+<div class="sec-hdr">
+    <span class="sec-hdr-lbl">🕐 &nbsp;Next 12-Hour Forecast</span>
+</div>
+""")
 
-        with st.expander(" &nbsp;Show 12-hour chart & data", expanded=True):
-            st.caption("Expected patient flow for the next 12 hours starting from the selected hour.")
+with st.expander(" &nbsp;Show 12-hour chart & data", expanded=True):
+    st.caption("Expected patient flow for the next 12 hours starting from the selected hour.")
 
-            st.line_chart(
-                hourly_df.set_index("Time")["Predicted_ED_Visits"],
-                color="#1560a8"
-            )
+    st.line_chart(
+        hourly_df.set_index("Time")["Predicted_ED_Visits"],
+        color="#1560a8"
+    )
 
-            hourly_rows = []
-            for _, row in hourly_df.iterrows():
-                t = str(row["Time"])
-                match = _re.search(r'\d{2}:\d{2}', t)
-                time_str = match.group() if match else t
-                hourly_rows.append((f"{time_str}", int(row["Predicted_ED_Visits"])))
+    hourly_rows = []
+    for _, row in hourly_df.iterrows():
+        t = str(row["Time"])
+        match = _re.search(r'\d{2}:\d{2}', t)
+        time_str = match.group() if match else t
+        hourly_rows.append((f"{time_str}", int(row["Predicted_ED_Visits"])))
 
-            st.html(make_table(hourly_rows, "Hour", "Predicted Visits"))
+    st.html(make_table(hourly_rows, "Hour", "Predicted Visits"))
 
-        st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
 
         # ── Action buttons ────────────────────────────────────────────────────
 col1, col2, col3 = st.columns(3)
