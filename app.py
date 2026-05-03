@@ -1357,6 +1357,19 @@ elif st.session_state.page == "results":
 
         st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
 
+
+        # ── Section 3: Daily Forecast Explanation  ───────────────────────
+        if daily_xai is not None:
+            render_daily_xai(
+                model=daily_xai["model"],
+                training_dataset=daily_xai["training_dataset"],
+                future_df=daily_xai["future_df"]
+            )
+        else:
+            st.warning("Forecast explanation is not available for this prediction.")
+
+        st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+
         # ── Action buttons ────────────────────────────────────────────────────
         col1, col2 = st.columns(2)
         with col1:
