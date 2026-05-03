@@ -79,6 +79,9 @@ if "daily_df" not in st.session_state:
 if "hourly_df" not in st.session_state:
     st.session_state.hourly_df = None
 
+if "daily_xai" not in st.session_state:
+    st.session_state.daily_xai = None
+
 logo = img_to_base64("assets/logo.png")
 
 st.markdown("""
