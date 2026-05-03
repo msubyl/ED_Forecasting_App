@@ -7,3 +7,5 @@ torch
 pytorch-lightning
 pytorch-forecasting
 scikit-learn
+pytz
+
