@@ -111,7 +111,14 @@ def predict_daily(user_input):
         "Predicted_ED_Visits": daily_values[:n]
     })
 
-    return result
+    daily_xai = {
+    "model": model,
+    "training_dataset": dataset,
+    "future_df": prediction_data
+    }
+
+
+    return result, daily_xai
 
 
 def predict_hourly(user_input):
