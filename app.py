@@ -52,6 +52,8 @@ if "user_input" not in st.session_state: st.session_state.user_input = None
 if "daily_df"   not in st.session_state: st.session_state.daily_df   = None
 if "hourly_df"  not in st.session_state: st.session_state.hourly_df  = None
 if "daily_xai" not in st.session_state: st.session_state.daily_xai = None
+if "hourly_xai" not in st.session_state: st.session_state.hourly_xai = None
+
     
 
 # ── Global LTR / Arabic locale fix (runs on every page) ─────────────────────
@@ -83,9 +85,51 @@ div[data-testid="stTextInput"] input {
 """, unsafe_allow_html=True)
 
 
-def render_daily_xai(model, training_dataset, future_df):
+def get_xai_figures(model, training_dataset, future_df):
     """
-    Render TFT interpretability section in the Marsad dashboard style.
+    Generate TFT interpretation figures for daily or hourly model.
+    Returns figures dict or None.
+    """
+    prediction_data = training_dataset.from_dataset(
+        training_dataset,
+        future_df,
+        predict=True,
+        stop_randomization=True,
+    )
+
+    prediction_loader = prediction_data.to_dataloader(
+        train=False,
+        batch_size=32,
+        num_workers=0,
+    )
+
+    predictions = model.predict(
+        prediction_loader,
+        mode="raw",
+        return_x=True,
+    )
+
+    if hasattr(predictions, "output"):
+        raw_predictions = predictions.output
+    elif isinstance(predictions, tuple):
+        raw_predictions = predictions[0]
+    else:
+        raw_predictions = predictions
+
+    interpretation = model.interpret_output(
+        raw_predictions,
+        reduction="sum",
+    )
+
+    figures = model.plot_interpretation(interpretation)
+    return figures
+
+
+def render_xai_comparison(daily_xai, hourly_xai):
+    """
+    Show Daily and Hourly XAI side by side:
+    - attention charts
+    - variables charts
     """
 
     st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
@@ -110,73 +154,95 @@ def render_daily_xai(model, training_dataset, future_df):
             What does this explanation show?
         </div>
         <div style="color:#1e3550;font-size:14px;line-height:1.7;">
-            This section explains the daily ED forecast in simple operational terms.
-            It shows which historical days and input factors the Temporal Fusion Transformer
-            considered before producing the forecast.
+            This section compares the daily and hourly forecast explanations.
+            The attention charts show which previous time steps the model focused on,
+            while the variable charts show which input factors influenced the forecast.
         </div>
     </div>
     """)
 
-    try:
-        prediction_data = training_dataset.from_dataset(
-            training_dataset,
-            future_df,
-            predict=True,
-            stop_randomization=True,
+    daily_figures = None
+    hourly_figures = None
+
+    if daily_xai is not None:
+        try:
+            daily_figures = get_xai_figures(
+                model=daily_xai["model"],
+                training_dataset=daily_xai["training_dataset"],
+                future_df=daily_xai["future_df"],
+            )
+        except Exception as e:
+            st.error(f"Daily XAI failed: {e}")
+
+    if hourly_xai is not None:
+        try:
+            hourly_figures = get_xai_figures(
+                model=hourly_xai["model"],
+                training_dataset=hourly_xai["training_dataset"],
+                future_df=hourly_xai["future_df"],
+            )
+        except Exception as e:
+            st.error(f"Hourly XAI failed: {e}")
+
+    # ── Attention charts  ─────────────────────────────
+    with st.expander("Which previous time steps did the model focus on?", expanded=True):
+        st.caption(
+            "Higher values mean the model relied more on that previous day or hour when making the forecast."
         )
 
-        prediction_loader = prediction_data.to_dataloader(
-            train=False,
-            batch_size=32,
-            num_workers=0,
+        col_daily, col_hourly = st.columns(2)
+
+        with col_daily:
+            st.markdown("#### Daily Attention")
+            if isinstance(daily_figures, dict) and "attention" in daily_figures:
+                st.pyplot(daily_figures["attention"])
+            else:
+                st.info("Daily attention explanation is not available.")
+
+        with col_hourly:
+            st.markdown("#### Hourly Attention")
+            if isinstance(hourly_figures, dict) and "attention" in hourly_figures:
+                st.pyplot(hourly_figures["attention"])
+            else:
+                st.info("Hourly attention explanation is not available.")
+
+    # ── Variable importance  ──────────────────────────
+    with st.expander("Which input factors influenced the forecast?", expanded=True):
+        st.caption(
+            "These charts show which variables were more important for the model prediction."
         )
 
-        predictions = model.predict(
-            prediction_loader,
-            mode="raw",
-            return_x=True,
-        )
+        col_daily, col_hourly = st.columns(2)
 
-        if hasattr(predictions, "output"):
-            raw_predictions = predictions.output
-        elif isinstance(predictions, tuple):
-            raw_predictions = predictions[0]
-        else:
-            raw_predictions = predictions
+        with col_daily:
+            st.markdown("#### Daily Variables")
 
-        interpretation = model.interpret_output(
-            raw_predictions,
-            reduction="sum",
-        )
+            if isinstance(daily_figures, dict):
+                if "encoder_variables" in daily_figures:
+                    st.pyplot(daily_figures["encoder_variables"])
+                elif "decoder_variables" in daily_figures:
+                    st.pyplot(daily_figures["decoder_variables"])
+                elif "static_variables" in daily_figures:
+                    st.pyplot(daily_figures["static_variables"])
+                else:
+                    st.info("Daily variable explanation is not available.")
+            else:
+                st.info("Daily variable explanation is not available.")
 
-        figures = model.plot_interpretation(interpretation)
+        with col_hourly:
+            st.markdown("#### Hourly Variables")
 
-        if isinstance(figures, dict):
-
-            if "attention" in figures:
-                with st.expander("Which previous days did the model focus on?", expanded=True):
-                    st.caption(
-                        "This chart shows which earlier days were most important when the model made the forecast. "
-                        "Higher values mean the model relied more on those historical days."
-                    )
-                    st.pyplot(figures["attention"])
-
-
-
-            if "static_variables" in figures:
-                with st.expander("What general context did the model use?", expanded=False):
-                    st.caption(
-                        "This chart shows general model context, such as the historical context length "
-                        "or series-level information used before forecasting."
-                    )
-                    st.pyplot(figures["static_variables"])
-
-        else:
-            with st.expander("Forecast explanation chart", expanded=True):
-                st.pyplot(figures)
-
-    except Exception as e:
-        st.error(f"Daily XAI failed: {e}")
+            if isinstance(hourly_figures, dict):
+                if "encoder_variables" in hourly_figures:
+                    st.pyplot(hourly_figures["encoder_variables"])
+                elif "decoder_variables" in hourly_figures:
+                    st.pyplot(hourly_figures["decoder_variables"])
+                elif "static_variables" in hourly_figures:
+                    st.pyplot(hourly_figures["static_variables"])
+                else:
+                    st.info("Hourly variable explanation is not available.")
+            else:
+                st.info("Hourly variable explanation is not available.")
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -484,11 +550,12 @@ elif st.session_state.page == "input":
             "is_weekend": is_weekend,
             "is_holiday": is_holiday,
         }
+
         st.session_state.user_input = user_input
 
         with st.spinner("Generating forecast..."):
             daily_df, daily_xai = predict_daily(user_input)
-            hourly_df = predict_hourly(user_input)
+            hourly_df, hourly_xai = predict_hourly(user_input)
 
             first_day_prediction = daily_df.iloc[0]["Predicted_ED_Visits"]
             hourly_sum = hourly_df["Predicted_ED_Visits"].sum()
@@ -498,14 +565,20 @@ elif st.session_state.page == "input":
                     hourly_df["Predicted_ED_Visits"] / hourly_sum
                 ) * first_day_prediction * 0.5
 
-            hourly_df["Predicted_ED_Visits"] = hourly_df["Predicted_ED_Visits"].round().astype(int)
+            hourly_df["Predicted_ED_Visits"] = (
+                hourly_df["Predicted_ED_Visits"].round().astype(int)
+            )
 
-        st.session_state.daily_df  = daily_df
+        st.session_state.daily_df = daily_df
         st.session_state.hourly_df = hourly_df
         st.session_state.daily_xai = daily_xai
-        st.session_state.page      = "results"
+        st.session_state.hourly_xai = hourly_xai
+        st.session_state.page = "results"
+
         st.rerun()
 
+
+      
 
 # ════════════════════════════════════════════════════════════════════════════
 # PAGE 3 — Results
@@ -678,15 +751,13 @@ elif st.session_state.page == "results":
 
         st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
 
-        # ── Section 3: Daily Forecast Explanation  ───────────────────────
-        if daily_xai is not None:
-            render_daily_xai(
-                model=daily_xai["model"],
-                training_dataset=daily_xai["training_dataset"],
-                future_df=daily_xai["future_df"]
-            )
+
+        # ── Section 3:  Forecast Explanation ───────────────
+        if daily_xai is not None or hourly_xai is not None:
+            render_xai_comparison(daily_xai, hourly_xai)
         else:
             st.warning("Forecast explanation is not available for this prediction.")
+      
 
         st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
 
