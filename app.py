@@ -1,6 +1,7 @@
 import streamlit as st
 from datetime import datetime, timezone, timedelta
 import base64
+import pandas as pd
 from pathlib import Path
 from utils.prediction import predict_daily, predict_hourly
 import re
@@ -552,32 +553,36 @@ elif st.session_state.page == "input":
         }
 
         st.session_state.user_input = user_input
+        
+    with st.spinner("Generating forecast..."):
+        daily_df, daily_xai = predict_daily(user_input)
+        hourly_df, hourly_xai = predict_hourly(user_input)
 
-        with st.spinner("Generating forecast..."):
-            daily_df, daily_xai = predict_daily(user_input)
-            hourly_df, hourly_xai = predict_hourly(user_input)
+        
+        # Adjust hourly predictions to align with daily prediction
+        first_day_prediction = daily_df.iloc[0]["Predicted_ED_Visits"]
+        hourly_sum = hourly_df["Predicted_ED_Visits"].sum()
 
-            first_day_prediction = daily_df.iloc[0]["Predicted_ED_Visits"]
-            hourly_sum = hourly_df["Predicted_ED_Visits"].sum()
-
-            if hourly_sum > 0:
-                hourly_df["Predicted_ED_Visits"] = (
-                    hourly_df["Predicted_ED_Visits"] / hourly_sum
-                ) * first_day_prediction * 0.5
-
+        if hourly_sum > 0:
             hourly_df["Predicted_ED_Visits"] = (
-                hourly_df["Predicted_ED_Visits"].round().astype(int)
-            )
+                hourly_df["Predicted_ED_Visits"] / hourly_sum
+            ) * first_day_prediction * 0.5
 
-        st.session_state.daily_df = daily_df
-        st.session_state.hourly_df = hourly_df
-        st.session_state.daily_xai = daily_xai
-        st.session_state.hourly_xai = hourly_xai
-        st.session_state.page = "results"
+        hourly_df["Predicted_ED_Visits"] = (
+            hourly_df["Predicted_ED_Visits"].round().astype(int)
+        )
 
-        st.rerun()
+    st.session_state.daily_df = daily_df
+    st.session_state.hourly_df = hourly_df
+    st.session_state.daily_xai = daily_xai
+    st.session_state.hourly_xai = hourly_xai
+
+    st.session_state.page = "results"
+    st.rerun()
 
 
+
+        
       
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -763,31 +768,37 @@ elif st.session_state.page == "results":
         # Daily Model Monitoring
         # ═════════════════════════════════════════════════════════════════════
 
-        daily_predictions = daily_df["Predicted_ED_Visits"]
+        # ── Daily Monitoring Calculations ─────────────────────────────
+        historical_df = pd.read_csv("data/clean_ED_data.csv")
+        historical_df["date"] = pd.to_datetime(historical_df["date"])
+        historical_df = historical_df.sort_values("date").reset_index(drop=True)
 
-        daily_prediction_mean = daily_predictions.mean()
-        daily_prediction_std = daily_predictions.std()
-        daily_unique_predictions = daily_predictions.nunique()
+        recent_history = historical_df.tail(60)
 
-        # Historical baseline from actual daily ED data
-        daily_baseline_mean = 23.949210
-        daily_baseline_std = 21.660479
+        daily_baseline_mean = recent_history["ED_visits"].mean()
+        daily_baseline_std = recent_history["ED_visits"].std()
+
+        daily_prediction_mean = daily_df["Predicted_ED_Visits"].mean()
+        daily_prediction_std = daily_df["Predicted_ED_Visits"].std()
+        daily_unique_predictions = daily_df["Predicted_ED_Visits"].nunique()
 
         daily_mean_shift = abs(daily_prediction_mean - daily_baseline_mean)
 
+        # ── Mean Shift Status ─────────────────────────────
         if daily_mean_shift <= 5:
             daily_shift_status = "Low"
             daily_shift_icon = "🟢"
-            daily_shift_issue = "Daily forecast mean is close to the historical baseline."
+            daily_shift_issue = "Daily forecast mean is close to the recent 60-day baseline."
         elif daily_mean_shift <= 10:
             daily_shift_status = "Medium"
             daily_shift_icon = "🟡"
-            daily_shift_issue = "Daily forecast mean shows a moderate shift from the historical baseline."
+            daily_shift_issue = "Daily forecast mean shows a moderate shift from the recent 60-day baseline."
         else:
             daily_shift_status = "High"
             daily_shift_icon = "🔴"
-            daily_shift_issue = "Daily forecast mean is far from the historical baseline."
+            daily_shift_issue = "Daily forecast mean is far from the recent 60-day baseline."
 
+        # ── Prediction Behavior Status ─────────────────────────────
         if daily_unique_predictions <= 2 or daily_prediction_std < 1:
             daily_behavior_status = "Needs Review"
             daily_behavior_icon = "🟡"
@@ -797,6 +808,7 @@ elif st.session_state.page == "results":
             daily_behavior_icon = "🟢"
             daily_behavior_issue = "Daily prediction variation looks acceptable for the current forecast."
 
+        # ── Final Monitoring Status ─────────────────────────────
         if daily_shift_status == "High" or daily_behavior_status == "Needs Review":
             daily_monitoring_status = "Action Recommended"
             daily_monitoring_icon = "🟡"
