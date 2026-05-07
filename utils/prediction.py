@@ -31,6 +31,7 @@ def predict_daily(user_input):
     df = pd.read_csv("data/clean_ED_data.csv")
     df["date"] = pd.to_datetime(df["date"])
     df = df.sort_values("date").reset_index(drop=True)
+    df = df.ffill().fillna(0)
 
     # Keep original values for display/debug only
     df["ED_visits_original"] = df["ED_visits"].copy()
@@ -120,9 +121,13 @@ def predict_daily_test_set(test_df):
     test_df["date"] = pd.to_datetime(test_df["date"])
     test_df = test_df.sort_values("date").reset_index(drop=True)
 
-    test_df["series_id"] = "ED_1"
+    # Keep actual values for metrics
+    test_df["ED_visits_original"] = test_df["ED_visits"].copy()
 
-    
+    # Match training pipeline if the model was trained using log1p target
+    test_df["ED_visits"] = np.log1p(test_df["ED_visits"])
+
+    test_df["series_id"] = "ED_1"
     test_df = add_time_features_daily(test_df)
 
     if "time_idx" not in test_df.columns:
@@ -147,6 +152,11 @@ def predict_daily_test_set(test_df):
     )
 
     predictions = raw_predictions.detach().cpu().numpy().reshape(-1)
+
+    # Convert predictions back from log scale
+    predictions = np.expm1(predictions)
+
+
 
     predictions = np.round(predictions).astype(int)
     predictions = np.maximum(predictions, 0)
@@ -252,3 +262,52 @@ def predict_hourly(user_input):
     return result, hourly_xai
 
 
+def predict_hourly_test_set(test_df):
+    model, training_dataset = load_hourly_model()
+
+    test_df = test_df.copy()
+
+    test_df["datetime"] = pd.to_datetime(test_df["datetime"])
+
+    if "date" not in test_df.columns:
+        test_df["date"] = test_df["datetime"].dt.date
+
+    test_df["date"] = pd.to_datetime(test_df["date"])
+    test_df = test_df.sort_values("datetime").reset_index(drop=True)
+
+    test_df["series_id"] = "ED_1"
+
+    
+    test_df = add_time_features_hourly(test_df)
+
+    if "time_idx" not in test_df.columns:
+        test_df["time_idx"] = range(len(test_df))
+
+    prediction_dataset = training_dataset.from_dataset(
+        training_dataset,
+        test_df,
+        predict=True,
+        stop_randomization=True
+    )
+
+    prediction_dataloader = prediction_dataset.to_dataloader(
+        train=False,
+        batch_size=32,
+        num_workers=0
+    )
+
+    raw_predictions = model.predict(
+        prediction_dataloader,
+        mode="prediction"
+    )
+
+    preds = extract_median_prediction(raw_predictions)
+
+    # Hourly model was trained using log1p(ED_visits),
+    # so reverse it using expm1.
+    predictions = np.expm1(preds)
+    predictions = np.maximum(predictions, 0)
+    predictions = np.round(predictions).astype(int)
+
+    return predictions[:len(test_df)]
+    
