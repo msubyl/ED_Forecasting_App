@@ -11,6 +11,10 @@ def calculate_monitoring_metrics_from_df(
     y_true = test_df[actual_col].astype(float)
     y_pred = test_df[pred_col].astype(float)
 
+    # ═════════════════════════════════════════════════════════════════════
+    # Basic Error Metrics
+    # ═════════════════════════════════════════════════════════════════════
+
     mae = np.mean(np.abs(y_true - y_pred))
     rmse = np.sqrt(np.mean((y_true - y_pred) ** 2))
 
@@ -26,6 +30,10 @@ def calculate_monitoring_metrics_from_df(
     else:
         mape = np.nan
 
+    # ═════════════════════════════════════════════════════════════════════
+    # Actual and Predicted Distribution
+    # ═════════════════════════════════════════════════════════════════════
+
     actual_mean = y_true.mean()
     pred_mean = y_pred.mean()
 
@@ -35,32 +43,46 @@ def calculate_monitoring_metrics_from_df(
     mean_shift = abs(pred_mean - actual_mean)
     std_shift = abs(pred_std - actual_std)
 
+    # ═════════════════════════════════════════════════════════════════════
+    # Ratios
+    # MAE Ratio and RMSE Ratio compare the error to the actual mean.
+    # ═════════════════════════════════════════════════════════════════════
+
     mae_ratio = mae / actual_mean if actual_mean != 0 else np.nan
     rmse_ratio = rmse / actual_mean if actual_mean != 0 else np.nan
     std_shift_ratio = std_shift / actual_std if actual_std != 0 else np.nan
 
     # ═════════════════════════════════════════════════════════════════════
     # Performance Status
-    # Measures prediction accuracy using MAE and RMSE relative to actual mean.
+    # Measures prediction accuracy using MAE Ratio and RMSE Ratio
     # ═════════════════════════════════════════════════════════════════════
 
-    if mae_ratio <= 0.25 and rmse_ratio <= 0.35:
+    if np.isnan(mae_ratio) or np.isnan(rmse_ratio):
+        performance_status = "Unknown"
+        performance_icon = "⚪"
+        performance_issue = (
+            f"{model_name} performance cannot be evaluated because the actual mean is zero."
+        )
+
+    elif mae_ratio <= 0.50 and rmse_ratio <= 0.60:
         performance_status = "Good"
         performance_icon = "🟢"
         performance_issue = (
             f"{model_name} performance on the test set is within an acceptable range."
         )
-    elif mae_ratio <= 0.45 and rmse_ratio <= 0.60:
+
+    elif mae_ratio <= 1.00 and rmse_ratio <= 1.00:
         performance_status = "Needs Monitoring"
         performance_icon = "🟡"
         performance_issue = (
             f"{model_name} performance shows moderate error and should be monitored."
         )
+
     else:
         performance_status = "Needs Review"
         performance_icon = "🔴"
         performance_issue = (
-            f"{model_name} performance shows high error and may require model review."
+            f"{model_name} performance shows high error because MAE Ratio or RMSE Ratio is greater than 1."
         )
 
     # ═════════════════════════════════════════════════════════════════════
@@ -72,14 +94,17 @@ def calculate_monitoring_metrics_from_df(
         mean_shift_status = "Unknown"
         mean_shift_icon = "⚪"
         mean_shift_issue = "Mean shift cannot be evaluated because actual std is zero."
+
     elif mean_shift <= 0.5 * actual_std:
         mean_shift_status = "Low"
         mean_shift_icon = "🟢"
         mean_shift_issue = "Prediction mean is close to the actual test-set mean."
+
     elif mean_shift <= actual_std:
         mean_shift_status = "Medium"
         mean_shift_icon = "🟡"
         mean_shift_issue = "Prediction mean shows a moderate shift from the actual test-set mean."
+
     else:
         mean_shift_status = "High"
         mean_shift_icon = "🔴"
@@ -94,14 +119,17 @@ def calculate_monitoring_metrics_from_df(
         std_shift_status = "Unknown"
         std_shift_icon = "⚪"
         std_shift_issue = "Std shift cannot be evaluated because actual std is zero."
-    elif std_shift_ratio <= 0.30:
+
+    elif std_shift_ratio <= 0.90:
         std_shift_status = "Low"
         std_shift_icon = "🟢"
         std_shift_issue = "Prediction variation is close to the actual test-set variation."
-    elif std_shift_ratio <= 0.60:
+
+    elif std_shift_ratio <= 1.0:
         std_shift_status = "Medium"
         std_shift_icon = "🟡"
         std_shift_issue = "Prediction variation differs moderately from the actual test-set variation."
+
     else:
         std_shift_status = "High"
         std_shift_icon = "🔴"
@@ -112,7 +140,7 @@ def calculate_monitoring_metrics_from_df(
     # Important:
     # Bad performance is not always drift.
     # Drift is based on mean/std shift.
-    # Performance is based on MAE/RMSE.
+    # Performance is based on MAE Ratio/RMSE Ratio.
     # ═════════════════════════════════════════════════════════════════════
 
     if (
@@ -146,7 +174,7 @@ def calculate_monitoring_metrics_from_df(
         recommendation = (
             "No strong drift is detected because the predicted mean and standard deviation "
             "are close to the actual test-set distribution. However, prediction error is high, "
-            "so review the model accuracy, low-visit hours, and preprocessing steps."
+            "so review the model accuracy, low-visit hours, spikes, and preprocessing steps."
         )
         alert_bg = "#fff8e8"
         alert_border = "#f0d28a"
@@ -181,27 +209,35 @@ def calculate_monitoring_metrics_from_df(
         "mae": mae,
         "rmse": rmse,
         "mape": mape,
+
         "actual_mean": actual_mean,
         "pred_mean": pred_mean,
         "actual_std": actual_std,
         "pred_std": pred_std,
+
         "mean_shift": mean_shift,
         "std_shift": std_shift,
+
         "mae_ratio": mae_ratio,
         "rmse_ratio": rmse_ratio,
         "std_shift_ratio": std_shift_ratio,
+
         "performance_status": performance_status,
         "performance_icon": performance_icon,
         "performance_issue": performance_issue,
+
         "mean_shift_status": mean_shift_status,
         "mean_shift_icon": mean_shift_icon,
         "mean_shift_issue": mean_shift_issue,
+
         "std_shift_status": std_shift_status,
         "std_shift_icon": std_shift_icon,
         "std_shift_issue": std_shift_issue,
+
         "monitoring_status": monitoring_status,
         "monitoring_icon": monitoring_icon,
         "recommendation": recommendation,
+
         "alert_bg": alert_bg,
         "alert_border": alert_border,
         "alert_color": alert_color,
