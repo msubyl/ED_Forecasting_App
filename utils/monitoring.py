@@ -64,7 +64,7 @@ def calculate_monitoring_metrics_from_df(
             f"{model_name} performance cannot be evaluated because the actual mean is zero."
         )
 
-    elif mae_ratio <= 0.50 and rmse_ratio <= 0.60:
+    elif mae_ratio <= 0.70 and rmse_ratio <= 0.90:
         performance_status = "Good"
         performance_icon = "🟢"
         performance_issue = (
