@@ -772,6 +772,7 @@ elif st.session_state.page == "results":
         daily_test_df = pd.read_csv("data/test_data_daily.csv")
         daily_test_df["date"] = pd.to_datetime(daily_test_df["date"])
         daily_test_df = daily_test_df.sort_values("date").reset_index(drop=True)
+        daily_test_df["ED_visits"] = np.expm1(daily_test_df["ED_visits"])
         
         
         daily_test_predictions = predict_daily_test_set(daily_test_df)
